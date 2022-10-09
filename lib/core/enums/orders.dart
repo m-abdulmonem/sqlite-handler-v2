@@ -1,0 +1,6 @@
+
+
+enum DatabaseOredrs {
+  asc,
+  desc
+}
