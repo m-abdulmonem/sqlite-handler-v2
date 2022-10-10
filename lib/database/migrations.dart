@@ -1,16 +1,12 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../core/utils/encyription.dart';
 import '/core/extensions/enumations.dart';
 
 import '/core/extensions/string.dart';
 
 import '../core/enums/sqlite_data_type.dart';
-
-import 'dart:convert';
 
 class Migrations {
   Map<String, dynamic>? tables = {};
@@ -28,10 +24,6 @@ class Migrations {
       throw Exception("You must enter database tables");
     }
 
-    final file = File(await _init.path);
-
-    // String credentials = "username:password";
-
     data.forEach((key, value) {
       if (value.runtimeType.toString().contains("Map")) {
         _init._handle(key, value);
@@ -40,26 +32,12 @@ class Migrations {
       }
     });
 
-    Codec<String, String> stringToBase64 = utf8.fuse(base64);
-
-    String encoded = stringToBase64.encode(_init._queries.join(";"));
-
-    file.writeAsString(encoded);
-
-    // String decoded = stringToBase64.decode(encoded);
-
-    // GetStorage().write(_init._key, _init.queries);
+    FileCryptor().encrypt(await _init.path, _init._queries.join(";"));
   }
 
   Future<List> get getTables async {
     try {
-      final file = File(await _init.path);
-
-      // Read the file
-      final tables = await file.readAsString();
-
-      Codec<String, String> stringToBase64 = utf8.fuse(base64);
-      return stringToBase64.decode(tables).split(";");
+      return (await FileCryptor().decrypt(await _init.path)).split(";");
     } catch (e) {
       // If encountering an error, return 0
       if (kDebugMode) {
@@ -70,7 +48,7 @@ class Migrations {
   }
 
   Future<String> get path async {
-    return join(await getDatabasesPath(), 'sqlite_handler_database_tables.txt');
+    return join(await getDatabasesPath(), 'sqlite_handler_database_tables.aes');
   }
 
   void _handle(String tableName, columns) {

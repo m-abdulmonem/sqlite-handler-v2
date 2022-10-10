@@ -108,14 +108,7 @@ class _MyAppState extends State<MyApp> {
             //     .limit(2)
             //     .order()
             //     .first();
-            UserModel user = await UserModel(
-                    name: "last",
-                    email: "last@ana.com",
-                    password: "123456789",
-                    isActive: true,
-                    createdAt: DateTime.now(),
-                    bio: "annnlasta")
-                .insert();
+            UserModel user = await UserModel().find(1);
 
             PersonsModel person = await PersonsModel(
               name: "ali",
@@ -125,7 +118,7 @@ class _MyAppState extends State<MyApp> {
               createdAt: DateTime.now(),
             ).insert();
 
-            print(person.outerJoin());
+            print(await person.outerJoin());
             // print(await person.outerJoin());
             // print(a.name);
 // print((await UserModel().where("id",value: 21).first()).ali);
