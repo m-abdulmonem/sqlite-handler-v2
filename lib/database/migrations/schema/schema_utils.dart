@@ -1,7 +1,20 @@
+import 'package:sqlite_handler/database/migrations/schema/on.dart';
+
 class SchemaUtils {
   String column;
 
   SchemaUtils(this.column);
+
+  constrained(String table) {
+    String state =
+        "FOREIGN KEY (${column.replaceAll("INTEGER", "")}) REFERENCES $table (id) ";
+
+    if (!column.contains("FOREIGN")) {
+      column += ", $state ,";
+    }
+
+    return On(column);
+  }
 
   nullable() {
     if (!column.contains("NULL")) {

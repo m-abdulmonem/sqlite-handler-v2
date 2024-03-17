@@ -7,34 +7,20 @@ import '/core/extensions/enumations.dart';
 abstract class DBHelper extends Migrations {
   String table;
   String _query = "";
+  List<Map<dynamic, dynamic>> _result = [];
   final List _bindings = [];
+
   DBHelper(this.table);
 
   Future<Database> get database async {
     final path = join(await getDatabasesPath(), 'sqlite_handler_database.db');
-
-    //     print("db_hel : $queries");
-    // if (queries.isEmpty || !GetStorage().hasData(_key)) {
-    //   throw Exception("You must enter database tables");
-    // }
-
     return openDatabase(
       path,
       onCreate: (db, version) async {
         final queries = await getTables;
         for (String query in queries) {
-          print(query);
           db.execute(query);
         }
-        // db.execute(
-        //   'CREATE TABLE breeds(id INTEGER PRIMARY KEY, name TEXT, description TEXT)',
-        // );
-
-        // db.execute(
-        //   'CREATE TABLE dogs(id INTEGER PRIMARY KEY, name TEXT, age INTEGER, color INTEGER, breedId INTEGER, FOREIGN KEY (breedId) REFERENCES breeds(id) ON DELETE SET NULL)',
-        // );
-
-        // db.execute(statement);
       },
       onConfigure: (db) async => await db.execute('PRAGMA foreign_keys = ON'),
       version: 1,
@@ -44,18 +30,19 @@ abstract class DBHelper extends Migrations {
   Future? rawQuery(String query) async {
     Database db = await database;
 
-    return await db.rawQuery(query);
+    _result = await db.rawQuery(query);
+
+    return this;
   }
 
   Future find(int id) async {
     Database db = await database;
 
-    List<Map<String, Object?>> result =
-        await db.rawQuery("SELECT * FROM $table WHERE id = $id");
+    _result = await db.rawQuery("SELECT * FROM $table WHERE id = $id");
 
-    if (result.isEmpty) return null;
+    if (_result.isEmpty) return null;
 
-    return fromMap(result.first);
+    return fromMap(_result.first);
   }
 
   DBHelper where(String column, {dynamic value, String boolean = "="}) {
@@ -118,6 +105,49 @@ abstract class DBHelper extends Migrations {
     _bindings.add(value);
   }
 
+  DBHelper hasOne() {
+    return this;
+  }
+
+  DBHelper hasMany(String relatedTable, String relatedColumn) {
+    _query =
+        "SELECT * FROM $table INNER JOIN  $relatedTable ON $relatedTable.id = $table.$relatedColumn ";
+    return this;
+  }
+
+  DBHelper belongsTo(String relatedTable, String relatedColumn) {
+// -- SELECT  *
+// -- FROM
+// --     suppliers
+// -- INNER JOIN supplier_groups
+// --     ON supplier_groups.id = suppliers.group_id;
+// --
+
+    // select * from suppliers  INNER JOIN supplier_groups   ON supplier_groups.id = suppliers.group_id  WHERE suppliers.id= 1;
+    _query =
+        "SELECT * FROM $table INNER JOIN  $relatedTable ON $relatedTable.id = $table.$relatedColumn ";
+
+    return this;
+  }
+
+  DBHelper belongsToMany(String relatedTable, String pivotTable,
+      {required String tabelId, required String relatedId}) {
+//     -- select supplier_groups from suppliers
+// SELECT  department.*,employee.*
+// FROM
+//     department
+// INNER JOIN link ON link.department_id=department.id
+//JOIN employee ON  employee.id = link.employee_id;
+
+    _query = "SELECT $table.*,$relatedTable.* FROM $table ";
+
+    _query += " INNER JOIN $pivotTable ON $pivotTable.$tabelId=$table.id ";
+    _query +=
+        " INNER JOIN $relatedTable ON $relatedTable.id =$pivotTable.$relatedId ";
+
+    return this;
+  }
+
   DBHelper order(
       {String? column = "created_at",
       DatabaseOredrs? order = DatabaseOredrs.asc}) {
@@ -152,6 +182,24 @@ abstract class DBHelper extends Migrations {
     return this;
   }
 
+  DBHelper select(dynamic columns) {
+    if (columns.runtimeType.toString().contains("String")) {
+      if (!_query.contains("SELECT")) {
+        _query += "SELECT $columns FROM $table ";
+      } else {
+        _query += _query.replaceAll("*", columns);
+      }
+    } else if (columns.runtimeType.toString().contains("List<String>")) {
+      if (!_query.contains("SELECT")) {
+        _query += "SELECT ${columns.join(",")} FROM $table ";
+      } else {
+        _query += _query.replaceAll("*", columns.join(","));
+      }
+    }
+
+    return this;
+  }
+
   Future<List?> all({int? paginate}) async {
     Database db = await database;
 
@@ -180,20 +228,21 @@ abstract class DBHelper extends Migrations {
         }
       });
 
+      _result.add(newMap);
       list.add(fromMap(newMap));
     }
     return list;
   }
 
-  Future<int> outerJoin() async {
+  Future<List<Map<String, Object?>>> outerJoin() async {
     Database db = await database;
 
-    List<Map<String, Object?>> result = await db.rawQuery(
-        "SELECT * FROM users LEFT OUTER JOIN persons ON users.id = persons.user_id");
+    // List<Map<String, Object?>> result = await db.rawQuery(
+    //     "SELECT * FROM users LEFT OUTER JOIN persons ON users.id = persons.user_id");
 
-    print(result);
+    var result = await db.rawQuery("pragma table_info('$table')");
 
-    return 1;
+    return result;
     //result.first.values.first as int;
   }
 
@@ -262,21 +311,49 @@ abstract class DBHelper extends Migrations {
       limit(paginate);
     }
 
-    List<Map<String, Object?>> result = await db.rawQuery(_query, _bindings);
+    _result = await db.rawQuery(_query, _bindings);
 
-    if (result.isEmpty) return null;
-    return fromMap(result.first);
+    if (_result.isEmpty) return null;
+
+    return fromMap(_result.first);
   }
 
-  Future<Map<String, Object?>?> getItem(int id) async {
+  Future last({int? paginate}) async {
     Database db = await database;
 
-    List<Map<String, Object?>> result =
-        await db.rawQuery("SELECT * FROM $table WHERE id = $id");
+    if (paginate != null) {
+      limit(paginate);
+    }
+    _result = await db.rawQuery(_query, _bindings);
 
-    if (result.isEmpty) return null;
+    if (_result.isEmpty) return null;
 
-    return result.first;
+    return fromMap(_result.last);
+  }
+
+  dynamic pluck(col) async {
+    var result = [];
+    var map = {};
+
+    await all();
+
+    _result.asMap().forEach((k, value) {
+      value.forEach((column, v) {
+        if (col.runtimeType.toString().contains("List<String>")) {
+          col.asMap().forEach((colKey, colValue) {
+            if (col[1] == column) {
+              map.putIfAbsent(value[col[0]], () => v);
+            }
+          });
+        } else {
+          if (col == column) {
+            result.add(v);
+          }
+        }
+      });
+    });
+
+    return result.isEmpty ? map : result;
   }
 
   Future insert() async {
@@ -284,31 +361,15 @@ abstract class DBHelper extends Migrations {
 
     Map data = toMap();
 
-    Map<String, dynamic> newMap = {};
-
-    data.forEach((k, v) {
-      if (v.runtimeType.toString() == "DateTime") {
-        newMap[k] = (v as DateTime).toIso8601String();
-      } else if (v.runtimeType.toString() == "bool") {
-        newMap[k] = v as bool ? 1 : 0;
-      } else {
-        newMap[k] = v;
-      }
-    });
+    data.putIfAbsent("created_at", () => DateTime.now());
 
     int id = await db.insert(
       table,
-      newMap,
+      handleDataType(data),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
     return find(id);
-  }
-
-  Future<List> get() async {
-    Database db = await database;
-
-    return await db.query(table);
   }
 
   // Future<List> all(dynamic Function(int) generator) async {
@@ -320,12 +381,30 @@ abstract class DBHelper extends Migrations {
   Future update(id) async {
     final db = await database;
 
+    Map<String, Object?> data = toMap();
+
+    data.putIfAbsent("updated_at", () => DateTime.now());
+
     return await db.update(
       table,
-      toMap(),
+      handleDataType(data),
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  Map<String, dynamic> handleDataType(data) {
+    Map<String, dynamic> newMap = {};
+    data.forEach((k, v) {
+      if (v.runtimeType.toString() == "DateTime") {
+        newMap[k] = (v as DateTime).toIso8601String();
+      } else if (v.runtimeType.toString() == "bool") {
+        newMap[k] = v as bool ? 1 : 0;
+      } else {
+        newMap[k] = v;
+      }
+    });
+    return newMap;
   }
 
   Future<int> delete(int id) async {
@@ -341,14 +420,16 @@ abstract class DBHelper extends Migrations {
   Future<void> erase() async {
     final db = await database;
 
-    var data = await get();
+    var data = await all();
 
-    for (Map model in data) {
-      await db.delete(
-        table,
-        where: 'id = ?',
-        whereArgs: [model['id']],
-      );
+    if (data != null) {
+      for (var model in data) {
+        await db.delete(
+          table,
+          where: 'id = ?',
+          whereArgs: [model.id],
+        );
+      }
     }
   }
 

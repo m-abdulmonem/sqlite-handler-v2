@@ -1,15 +1,7 @@
 # sqlite_handler
 
-A new Flutter plugin project.
+Sqlite Handler is a small and light package to deal with the Sqlite database by writing only the name of the database and its fields, and then calling the methods in the package in order to complete the database queries from creating, deleting, modifying and deleting.
 
 ## Getting Started
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/developing-packages/),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
-
-For help getting started with Flutter development, view the
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
 

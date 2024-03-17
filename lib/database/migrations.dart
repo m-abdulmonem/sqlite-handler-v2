@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'package:file_encryptor/file_encryptor.dart';
+
 import 'package:sqflite/sqflite.dart';
 
-import '../core/utils/encyription.dart';
 import '/core/extensions/enumations.dart';
 
 import '/core/extensions/string.dart';
@@ -17,7 +17,7 @@ class Migrations {
 
   static final Migrations _init = Migrations();
 
-  static void createTables([Map<String, dynamic>? dbTables]) async {
+  static Future<void> createTables([Map<String, dynamic>? dbTables]) async {
     var data = dbTables ?? _init.tables;
 
     if (data == null) {
@@ -32,19 +32,22 @@ class Migrations {
       }
     });
 
-    FileCryptor().encrypt(await _init.path, _init._queries.join(";"));
+    // return _init._queries;
+
+    FileEncryptor().encrypt(await _init.path, _init._queries.join(";"));
   }
 
   Future<List> get getTables async {
-    try {
-      return (await FileCryptor().decrypt(await _init.path)).split(";");
-    } catch (e) {
-      // If encountering an error, return 0
-      if (kDebugMode) {
-        print(e);
-      }
-      return [];
-    }
+    return (await FileEncryptor().decrypt(await _init.path)).split(";");
+    // try {
+    //   return (await FileCryptor().decrypt(await _init.path)).split(";");
+    // } catch (e) {
+    //   // If encountering an error, return 0
+    //   if (kDebugMode) {
+    //     print(e);
+    //   }
+    //   return [];
+    // }
   }
 
   Future<String> get path async {

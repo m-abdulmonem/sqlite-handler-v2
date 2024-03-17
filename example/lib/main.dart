@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:sqlite_handler/database/database_helper.dart';
 import 'package:sqlite_handler/model.dart';
 import 'package:sqlite_handler_example/tables.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // // CustomWidgets().convertSharedDataToSqlite();
-  // await GetStorage.init();
 
   Migrations.createTables(tables);
 
@@ -103,22 +102,31 @@ class _MyAppState extends State<MyApp> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
+            // PersonsModel user = PersonsModel();
+            // var all = await user.all();
+
+            // print(all);
+            print(await PersonsModel().pluck(['id', 'name']));
+
+            // var a = ['name'];
+            // print(a.runtimeType.toString().contains("List<String>"));
+
             // UserModel a = await UserModel()
             //     .orWhere("id", value: 21)
             //     .limit(2)
             //     .order()
             //     .first();
-            UserModel user = await UserModel().find(1);
+            // UserModel user = await UserModel().find(1);
 
-            PersonsModel person = await PersonsModel(
-              name: "ali",
-              email: "ana@ana.com",
-              password: "123456789",
-              userId: user.id,
-              createdAt: DateTime.now(),
-            ).insert();
+            // PersonsModel person = await PersonsModel(
+            //   name: "ali",
+            //   email: "ana@ana.com",
+            //   password: "123456789",
+            //   userId: user.id,
+            //   createdAt: DateTime.now(),
+            // ).insert();
 
-            print(await person.outerJoin());
+            // print(await PersonsModel().outerJoin());
             // print(await person.outerJoin());
             // print(a.name);
 // print((await UserModel().where("id",value: 21).first()).ali);
@@ -172,7 +180,7 @@ class UserModel extends Model {
 }
 
 class PersonsModel extends Model {
-  int? id, userId;
+  int? id, companyId;
   String? email, password, name;
   DateTime? createdAt;
 
@@ -182,9 +190,18 @@ class PersonsModel extends Model {
       this.password,
       this.name,
       this.createdAt,
-      this.userId})
+      this.companyId})
       : super('persons');
   // super('persons', );
+
+  DBHelper departments() {
+    return belongsToMany("departments", "department_persons",
+        tabelId: "department_id", relatedId: "person_id");
+  }
+
+  DBHelper company() {
+    return belongsTo("compaines", "company_id");
+  }
 
   @override
   PersonsModel fromMap(Map<dynamic, dynamic> map) => PersonsModel(
@@ -192,7 +209,7 @@ class PersonsModel extends Model {
         email: map['email'],
         password: map['password'],
         name: map['name'],
-        userId: map['user_id'],
+        companyId: map['company_id'],
         createdAt: getDateTime(map['created_at']),
       );
 
@@ -202,7 +219,64 @@ class PersonsModel extends Model {
         'email': email,
         'password': password,
         'name': name,
-        'user_id': userId,
+        'company_id': companyId,
+        'created_at': createdAt,
+      };
+}
+
+class CompanyModel extends Model {
+  int? id;
+  String? name;
+  DateTime? createdAt;
+
+  CompanyModel({this.id, this.name, this.createdAt})
+      : super('compaines');
+
+
+
+  DBHelper persons() {
+    return hasMany("persons", "person_id");
+  }
+
+
+  @override
+  CompanyModel fromMap(Map<dynamic, dynamic> map) => CompanyModel(
+        id: map['id'],
+        name: map['name'],
+        createdAt: getDateTime(map['created_at']),
+      );
+
+  @override
+  Map<String, Object?> toMap() => {
+        'id': id,
+        'name': name,
+        'created_at': createdAt,
+      };
+}
+
+class DepartmentModel extends Model {
+  int? id;
+  String? name;
+  DateTime? createdAt;
+
+  DepartmentModel({this.id, this.name, this.createdAt}) : super('departments');
+
+  DBHelper persons() {
+    return belongsToMany("persons", "department_persons",
+        tabelId: "person_id", relatedId: "department_id");
+  }
+
+  @override
+  DepartmentModel fromMap(Map<dynamic, dynamic> map) => DepartmentModel(
+        id: map['id'],
+        name: map['name'],
+        createdAt: getDateTime(map['created_at']),
+      );
+
+  @override
+  Map<String, Object?> toMap() => {
+        'id': id,
+        'name': name,
         'created_at': createdAt,
       };
 }

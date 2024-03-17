@@ -24,6 +24,16 @@ class Schema {
     return column;
   }
 
+  SchemaUtils foreignId(name) {
+    //   FOREIGN KEY (group_id) REFERENCES supplier_groups (id)
+    //  ON UPDATE SET NULL
+    //  ON DELETE SET NULL
+    var column = integer(name);
+    _columns[name] = column;
+
+    return column;
+  }
+
   SchemaUtils text(name) {
     var column = SchemaUtils(" $name TEXT   ");
     _columns[name] = column;
@@ -44,16 +54,20 @@ class Schema {
   }
 
   String createTable(String tableName) {
-    String query = " CREATE TABLE IF NOT EXISTS $tableName ( ";
+    String query = " CREATE TABLE IF NOT EXISTS $tableName ( ", foreigns = "";
 
     _columns.forEach((k, v) {
       if (v.runtimeType.toString() == "SchemaUtils") {
-        query += " ${v.get()}  ";
+        if (v.get().contains("FOREIGN")) {
+          foreigns += " ${v.get()} ";
+        } else {
+          query += " ${v.get()}  ";
+        }
       } else {
         query += " $v ";
       }
     });
 
-    return ' ${query.limitedTrim()} ); ';
+    return ' ${query.limitedTrim()} ${foreigns.isNotEmpty ? ", ${foreigns.limitedTrim()}" : null } ); ';
   }
 }

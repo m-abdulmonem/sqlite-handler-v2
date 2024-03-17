@@ -16,9 +16,30 @@ final tables = {
     schema.text("email").notNull().unique();
     schema.text("name").nullable().defaultValue("anan");
     schema.text("password").notNull();
-    schema.integer("user_id").nullable();
+    schema.foreignId("company_id").constrained("compaines");
+    schema.timestamps();
+    return schema;
+  },
+  'departments': () {
+    Schema schema = Schema();
+    schema.id();
+    schema.text("name").notNull();
+    schema.timestamps();
+    return schema;
+  },
+  'compaines': () {
+    Schema schema = Schema();
+    schema.id();
+    schema.text("name").notNull();
+    schema.timestamps();
+    return schema;
+  },
+  'department_persons': () {
+    Schema schema = Schema();
+    schema.id();
+    schema.foreignId("department_id").constrained("departments");
+    schema.foreignId("person_id").constrained("persons");
     schema.timestamps();
     return schema;
   }
 };
-
