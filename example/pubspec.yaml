@@ -22,12 +22,12 @@ dependencies:
     sdk: flutter
 
   sqlite_handler:
-    # When depending on this package from a real application you should use:
-    #   sqlite_handler: ^x.y.z
-    # See https://dart.dev/tools/pub/dependencies#version-constraints
-    # The example app is bundled with the plugin so we use a path dependency on
-    # the parent directory to use the current plugin's version.
+    # Use local path to develop against the current plugin source
     path: ../
+
+  sqflite_common_ffi: ^2.3.2
+  sqflite_common: ^2.5.4
+  path: ^1.9.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

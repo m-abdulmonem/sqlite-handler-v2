@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:sqlite_handler/database/database_helper.dart';
-import 'package:sqlite_handler/model.dart';
-import 'package:sqlite_handler_example/tables.dart';
+import 'demos/encryption_demo.dart';
+import 'demos/migrations_demo.dart';
+import 'demos/orders_and_types_demo.dart';
+import 'demos/query_demo.dart';
+import 'demos/relations_demo.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  Migrations.createTables(tables);
-
   runApp(const MyApp());
 }
 
@@ -20,263 +19,78 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('sqlite_handler example'),
         ),
-        body: Center(
-          child: TextButton(
-            child: const Text('Running on: n'),
-            onPressed: () async {
-              await UserModel(
-                      name: "Allen",
-                      email: "allen@ana.com",
-                      password: "123456789",
-                      isActive: true,
-                      createdAt: DateTime.now(),
-                      bio: "Allen")
-                  .insert();
-
-              await UserModel(
-                      name: "Teddy",
-                      email: "teddy@ana.com",
-                      password: "123456789",
-                      isActive: true,
-                      createdAt: DateTime.now(),
-                      bio: "Teddy")
-                  .insert();
-
-              await UserModel(
-                      name: "Mark",
-                      email: "mark@ana.com",
-                      password: "123456789",
-                      isActive: true,
-                      createdAt: DateTime.now(),
-                      bio: "Mark")
-                  .insert();
-
-              await UserModel(
-                      name: "James",
-                      email: "hames@ana.com",
-                      password: "123456789",
-                      isActive: true,
-                      createdAt: DateTime.now(),
-                      bio: "James")
-                  .insert();
-
-              await UserModel(
-                      name: "Kim",
-                      email: "kim@ana.com",
-                      password: "123456789",
-                      isActive: true,
-                      createdAt: DateTime.now(),
-                      bio: "Kim")
-                  .insert();
-
-              await UserModel(
-                      name: "Paul",
-                      email: "paul@ana.com",
-                      password: "123456789",
-                      isActive: false,
-                      createdAt: DateTime.now(),
-                      bio: "Paul")
-                  .insert();
-
-              await UserModel(
-                      name: "ali",
-                      email: "ana@ana.com",
-                      password: "123456789",
-                      isActive: true,
-                      createdAt: DateTime.now(),
-                      bio: "annna")
-                  .insert();
-            },
-          ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () async {
-            // PersonsModel user = PersonsModel();
-            // var all = await user.all();
-
-            // print(all);
-            print(await PersonsModel().pluck(['id', 'name']));
-
-            // var a = ['name'];
-            // print(a.runtimeType.toString().contains("List<String>"));
-
-            // UserModel a = await UserModel()
-            //     .orWhere("id", value: 21)
-            //     .limit(2)
-            //     .order()
-            //     .first();
-            // UserModel user = await UserModel().find(1);
-
-            // PersonsModel person = await PersonsModel(
-            //   name: "ali",
-            //   email: "ana@ana.com",
-            //   password: "123456789",
-            //   userId: user.id,
-            //   createdAt: DateTime.now(),
-            // ).insert();
-
-            // print(await PersonsModel().outerJoin());
-            // print(await person.outerJoin());
-            // print(a.name);
-// print((await UserModel().where("id",value: 21).first()).ali);
-
-            // print(UserModel().fromMap(a[0]));
-          },
-          child: const Text("click me"),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            _DemoTile(title: 'Encryption Demo', runner: runEncryptionDemo),
+            _DemoTile(title: 'Query Builder Demo', runner: runQueryDemo),
+            _DemoTile(title: 'Relations Demo', runner: runRelationsDemo),
+            _DemoTile(
+                title: 'Orders & Types Demo',
+                runner: () async => runOrdersAndTypesDemo()),
+            _DemoTile(
+                title: 'Migrations Demo (FFI desktop)',
+                runner: runMigrationsDemo),
+          ],
         ),
       ),
     );
   }
 }
 
-class UserModel extends Model {
-  int? id;
-  String? email, password, name, bio;
-  bool? isActive;
-  DateTime? createdAt;
-
-  UserModel(
-      {this.id,
-      this.email,
-      this.password,
-      this.name,
-      this.bio,
-      this.createdAt,
-      this.isActive})
-      : super('users');
+class _DemoTile extends StatefulWidget {
+  final String title;
+  final Future<String> Function() runner;
+  const _DemoTile({required this.title, required this.runner});
 
   @override
-  UserModel fromMap(Map<dynamic, dynamic> map) => UserModel(
-        id: map['id'],
-        email: map['email'],
-        password: map['password'],
-        bio: map['bio'],
-        name: map['name'],
-        isActive: getBool(map['is_active']),
-        createdAt: getDateTime(map['created_at']),
-      );
-
-  @override
-  Map<String, Object?> toMap() => {
-        'id': id,
-        'email': email,
-        'password': password,
-        'bio': bio,
-        'name': name,
-        'is_active': isActive,
-        'created_at': createdAt,
-      };
+  State<_DemoTile> createState() => _DemoTileState();
 }
 
-class PersonsModel extends Model {
-  int? id, companyId;
-  String? email, password, name;
-  DateTime? createdAt;
+class _DemoTileState extends State<_DemoTile> {
+  String _output = '';
+  bool _loading = false;
 
-  PersonsModel(
-      {this.id,
-      this.email,
-      this.password,
-      this.name,
-      this.createdAt,
-      this.companyId})
-      : super('persons');
-  // super('persons', );
-
-  DBHelper departments() {
-    return belongsToMany("departments", "department_persons",
-        tabelId: "department_id", relatedId: "person_id");
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(widget.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                ElevatedButton(
+                  onPressed: _loading
+                      ? null
+                      : () async {
+                          setState(() => _loading = true);
+                          try {
+                            final result = await widget.runner();
+                            setState(() => _output = result);
+                          } finally {
+                            setState(() => _loading = false);
+                          }
+                        },
+                  child: Text(_loading ? 'Running...' : 'Run'),
+                )
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_output.isNotEmpty) Text(_output),
+          ],
+        ),
+      ),
+    );
   }
-
-  DBHelper company() {
-    return belongsTo("compaines", "company_id");
-  }
-
-  @override
-  PersonsModel fromMap(Map<dynamic, dynamic> map) => PersonsModel(
-        id: map['id'],
-        email: map['email'],
-        password: map['password'],
-        name: map['name'],
-        companyId: map['company_id'],
-        createdAt: getDateTime(map['created_at']),
-      );
-
-  @override
-  Map<String, Object?> toMap() => {
-        'id': id,
-        'email': email,
-        'password': password,
-        'name': name,
-        'company_id': companyId,
-        'created_at': createdAt,
-      };
-}
-
-class CompanyModel extends Model {
-  int? id;
-  String? name;
-  DateTime? createdAt;
-
-  CompanyModel({this.id, this.name, this.createdAt})
-      : super('compaines');
-
-
-
-  DBHelper persons() {
-    return hasMany("persons", "person_id");
-  }
-
-
-  @override
-  CompanyModel fromMap(Map<dynamic, dynamic> map) => CompanyModel(
-        id: map['id'],
-        name: map['name'],
-        createdAt: getDateTime(map['created_at']),
-      );
-
-  @override
-  Map<String, Object?> toMap() => {
-        'id': id,
-        'name': name,
-        'created_at': createdAt,
-      };
-}
-
-class DepartmentModel extends Model {
-  int? id;
-  String? name;
-  DateTime? createdAt;
-
-  DepartmentModel({this.id, this.name, this.createdAt}) : super('departments');
-
-  DBHelper persons() {
-    return belongsToMany("persons", "department_persons",
-        tabelId: "person_id", relatedId: "department_id");
-  }
-
-  @override
-  DepartmentModel fromMap(Map<dynamic, dynamic> map) => DepartmentModel(
-        id: map['id'],
-        name: map['name'],
-        createdAt: getDateTime(map['created_at']),
-      );
-
-  @override
-  Map<String, Object?> toMap() => {
-        'id': id,
-        'name': name,
-        'created_at': createdAt,
-      };
 }

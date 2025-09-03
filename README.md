@@ -30,7 +30,8 @@ dependencies:
 ### Basic Usage
 
 ```dart
-import 'package:sqlite_handler/sqlite_handler.dart';
+import 'package:sqlite_handler/model.dart';
+import 'package:sqlite_handler/core/enums/orders.dart';
 
 // Define your model
 class User extends Model {
@@ -38,7 +39,7 @@ class User extends Model {
   String? email;
   DateTime? createdAt;
   
-  User() : super('users');
+  User() : super(table: 'users');
   
   @override
   Map<String, Object?> toMap() {
@@ -81,6 +82,73 @@ void main() async {
 }
 ```
 
+### Example usage (end-to-end)
+
+```dart
+import 'package:flutter/widgets.dart';
+import 'package:sqlite_handler/model.dart';
+import 'package:sqlite_handler/core/enums/orders.dart';
+
+// 1) Define a model mapped to a table
+class User extends Model {
+  int? id;
+  String? name;
+  String? email;
+  DateTime? createdAt;
+
+  User({this.id, this.name, this.email, this.createdAt}) : super(table: 'users');
+
+  @override
+  Map<String, Object?> toMap() => {
+        'id': id,
+        'name': name,
+        'email': email,
+        'created_at': createdAt?.toIso8601String(),
+      };
+
+  @override
+  User fromMap(Map<dynamic, dynamic> map) => User(
+        id: map['id'] as int?,
+        name: map['name'] as String?,
+        email: map['email'] as String?,
+        createdAt: map['created_at'] != null
+            ? DateTime.parse(map['created_at'] as String)
+            : null,
+      );
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 2) Make sure the "users" table exists (run migrations first)
+  //    dart run bin/migrate.dart migrate
+
+  // 3) Create
+  final inserted = await User(name: 'Alice', email: 'alice@example.com', createdAt: DateTime.now()).insert() as User?;
+  final userId = inserted?.id;
+
+  // 4) Read
+  final found = userId != null ? await User().find(userId) as User? : null;
+
+  // 5) Query builder
+  final latest = await User()
+      .where('email', value: 'alice@example.com')
+      .orderBy(column: 'created_at', order: DatabaseOrder.descending)
+      .limit(1)
+      .all();
+
+  // 6) Update
+  if (userId != null) {
+    await User(id: userId, name: 'Alice Updated').update(userId);
+  }
+
+  // 7) Delete
+  if (userId != null) {
+    await User().delete(userId);
+  }
+}
+```
+
 ## Migrations
 
 The package includes a powerful Laravel-like migration system that makes database schema management easy and reliable.
@@ -103,7 +171,7 @@ dart run bin/migrate.dart make:add_columns users name:text:not_null email:text:n
 #### Manual Creation
 
 ```dart
-import 'package:sqlite_handler/sqlite_handler.dart';
+import 'package:sqlite_handler/core/utils/encryption.dart';
 
 class CreateUsersTable extends Migration {
   @override

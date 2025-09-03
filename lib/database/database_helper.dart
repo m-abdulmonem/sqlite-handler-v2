@@ -2,7 +2,6 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../core/enums/orders.dart';
 import '../model.dart';
-import '../core/extensions/enumations.dart';
 
 /// Enhanced database helper with better error handling and modern features
 abstract class DBHelper {

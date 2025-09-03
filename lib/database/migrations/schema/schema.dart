@@ -1,5 +1,3 @@
-import '/core/extensions/string.dart';
-import '/core/enums/sqlite_data_type.dart';
 import 'schema_utils.dart';
 
 /// Schema builder for creating database tables
